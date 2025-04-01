@@ -10,7 +10,12 @@
   },
   "private": true,
   "dependencies": {
+    "axe-core": "^4.10.3",
+    "canvas": "^3.1.0",
     "cheerio": "^1.0.0",
-    "commander": "^13.1.0"
+    "color": "^5.0.0",
+    "commander": "^13.1.0",
+    "jsdom": "^26.0.0",
+    "postcss": "^8.5.3"
   }
 }

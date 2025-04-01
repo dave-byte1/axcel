@@ -29,30 +29,30 @@ program
             const stats = fs.statSync(input);
             let results = [];
 
-            // Function that recursively walks through directories and scans files
-            const walkDirectory = (dir) => {
+            // Asynchronous recursive function to walk through directories and scan files
+            const walkDirectory = async (dir) => {
                 const files = fs.readdirSync(dir);
-                files.forEach(file => {
+                for (const file of files) {
                     const fullPath = path.join(dir, file);
                     const fileStats = fs.statSync(fullPath);
                     if (fileStats.isDirectory()) {
-                        walkDirectory(fullPath);
+                        await walkDirectory(fullPath);
                     } else if (['.html', '.css'].includes(path.extname(fullPath))) {
                         console.log(`Scanning file: ${fullPath}`);
-                        const report = scanner.scan(fullPath);
+                        const report = await scanner.scan(fullPath);
                         results.push({file: fullPath, report});
                     }
-                });
+                }
             };
 
             // Scan a single file or directory
             if (stats.isFile()) {
                 console.log(`Scanning file: ${input}`);
-                const report = scanner.scan(input);
+                const report = await scanner.scan(input);
                 results.push({file: input, report});
             } else if (stats.isDirectory()) {
                 console.log(`Scanning directory: ${input}`);
-                walkDirectory(input);
+                await walkDirectory(input);
             } else {
                 console.error("Error: Input path is neither a file or directory.");
                 process.exit(1);
@@ -67,9 +67,14 @@ program
                 }
             }
 
+            const reducedResults = results.map(result => ({
+                file: result.file,
+                issues: result.report.issues || []
+            }));
+
             // Output the results based on the chosen report format
             if (options.report === 'json') {
-                console.log(JSON.stringify(results, null, 2));
+                console.log(JSON.stringify(reducedResults, null, 2));
             } else if (options.report === 'html') {
                 const htmlOutput = `
                     <html>
@@ -77,7 +82,7 @@ program
                             <title>Accessibility Scan Report</title>
                         </head>
                         <body>
-                            <pre>${JSON.stringify(results, null, 2)}</pre>
+                            <pre>${JSON.stringify(reducedResults, null, 2)}</pre>
                         </body>
                     </html>
                 `;
