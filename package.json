@@ -1,6 +1,6 @@
 {
   "name": "axcel",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "An AI-powered Web Accessibility Scanning tool",
   "bin": {
     "axcel": "./bin/cli.js"
