@@ -49,14 +49,38 @@ program
             // Scan a single file or directory
             if (stats.isFile()) {
                 console.log(`Scanning file: ${input}`);
-                const report = await scanner.scan(input);
-                results.push({file: input, report});
+                try {
+                    const report = await scanner.scan(input);
+                    results.push({file: input, report});
+                } catch (error) {
+                    const errorReport = handleScanError(error, input);
+                    results.push({file: input, report: errorReport});
+                }
             } else if (stats.isDirectory()) {
                 console.log(`Scanning directory: ${input}`);
+
+                // Modified walkDirectory function with error handling
+                const walkDirectory = async (dir) => {
+                    const files = fs.readdirSync(dir);
+                    for (const file of files) {
+                        const fullPath = path.join(dir, file);
+                        const fileStats = fs.statSync(fullPath);
+                        if (fileStats.isDirectory()) {
+                            await walkDirectory(fullPath);
+                        } else if (['.html', '.css'].includes(path.extname(fullPath))) {
+                            console.log(`Scanning file: ${fullPath}`);
+                            try {
+                                const report = await scanner.scan(fullPath);
+                                results.push({file: fullPath, report});
+                            } catch (error) {
+                                const errorReport = handleScanError(error, fullPath);
+                                results.push({file: fullPath, report: errorReport});
+                            }
+                        }
+                    }
+                };
+
                 await walkDirectory(input);
-            } else {
-                console.error("Error: Input path is neither a file or directory.");
-                process.exit(1);
             }
 
             // If AI suggestions are enabled, add them to the report
@@ -141,8 +165,8 @@ function generateHTMLReport(results) {
             // HTML issue
             return `
                                 <div class="issue">
-                                    <h4 class="impact-${issue.impact || 'moderate'}">${issue.id}: ${issue.description || ''}</h4>
-                                    <p>${issue.help || ''}</p>
+                                    <h4 class="impact-${issue.impact || 'moderate'}">${escapeHTML(issue.id)}: ${escapeHTML(issue.description || '')}</h4>
+                                    <p>${escapeHTML(issue.help || '')}</p>
                                     ${issue.nodes && issue.nodes[0] ? `<pre>${escapeHTML(issue.nodes[0].html)}</pre>` : ''}
                                     
                                     ${result.aiSuggestions && result.aiSuggestions.html ?
@@ -160,9 +184,9 @@ function generateHTMLReport(results) {
             // CSS issue
             return `
                                 <div class="issue">
-                                    <h4 class="impact-moderate">${issue.selector}:</h4>
+                                    <h4 class="impact-moderate">${escapeHTML(issue.selector)}:</h4>
                                     ${issue.issues ? issue.issues.map(cssIssue => `
-                                    <p>${cssIssue.message}</p>
+                                    <p>${escapeHTML(cssIssue.message)}</p>
                                     `).join('') : ''}
                                     
                                     ${result.aiSuggestions && result.aiSuggestions.css ?
@@ -171,7 +195,7 @@ function generateHTMLReport(results) {
                     .map(suggestion => `
                                         <div class="suggestion">
                                             <h4>Suggestion:</h4>
-                                            <p>${suggestion.suggestion}</p>
+                                            <p>${escapeHTML(suggestion.suggestion)}</p>
                                             <pre>${escapeHTML(suggestion.codeFix)}</pre>
                                         </div>
                                         `).join('') : ''}
@@ -386,6 +410,19 @@ function printTableReport(results) {
     });
 
     console.log('\nScan complete. Use --report=json or --report=html with --output=filename.ext to save full reports with AI suggestions.');
+}
+
+// Handles errors during the scanning process
+function handleScanError(error, filePath) {
+    console.error(`Warning: Error scanning ${filePath}: ${error.message}`);
+
+    // Create a minimal report object with error information
+    return {
+        file: filePath,
+        type: path.extname(filePath).toLowerCase() === '.html' ? 'html' : 'css',
+        issues: [],
+        error: error.message
+    };
 }
 
 program.parse(process.argv);

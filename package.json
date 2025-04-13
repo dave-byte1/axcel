@@ -8,7 +8,16 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "private": true,
+  "keywords": [
+    "accessibility",
+    "scanner",
+    "a11y",
+    "html",
+    "css",
+    "ai"
+  ],
+  "author": "Deyvid Vasilev",
+  "license": "MIT",
   "dependencies": {
     "@google/generative-ai": "^0.24.0",
     "axe-core": "^4.10.3",
